@@ -38,6 +38,20 @@ from github.GithubException import UnknownObjectException
 
 class SimpleTriager(DefaultTriager):
 
+    @classmethod
+    def create_parser(cls):
+        parser = DefaultTriager.create_parser()
+
+        parser.description = "Triage issue and pullrequest queues for any github repo.\n" \
+                             " (NOTE: only useful if you have commit access to" \
+                             " the repo in question.)"
+
+        parser.add_argument("--pr", "--id", type=str, dest="number",
+                            help="Triage only the specified pr|issue (separated by commas)")
+        parser.add_argument("--repo", "-r", type=str, required=True,
+                    help="Github repo to triage (defaults to all)")
+        return parser
+
     def run(self):
 
         # create the fileindexer
