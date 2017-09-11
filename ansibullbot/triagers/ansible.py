@@ -203,10 +203,10 @@ class AnsibleTriage(DefaultTriager):
         # resume is just an overload for the start-at argument
         resume = self.get_resume()
         if resume:
-            if self.args.sort == 'desc':
-                self.args.start_at = resume['number'] - 1
+            if self.sort == 'desc':
+                self.start_at = resume['number'] - 1
             else:
-                self.args.start_at = resume['number'] + 1
+                self.start_at = resume['number'] + 1
 
     @property
     def ansible_members(self):
@@ -255,7 +255,7 @@ class AnsibleTriage(DefaultTriager):
         self.collect_repos()
 
         # stop here if we're just collecting issues to populate cache
-        if self.args.collect_only:
+        if self.collect_only:
             return
 
         # loop through each repo made by collect_repos
@@ -281,17 +281,17 @@ class AnsibleTriage(DefaultTriager):
                 # keep track of known issues
                 self.repos[repopath]['processed'].append(number)
 
-                if issue.state == 'closed' and not self.args.ignore_state:
+                if issue.state == 'closed' and not self.ignore_state:
                     logging.info(str(number) + ' is closed, skipping')
                     redo = False
                     continue
 
-                if self.args.only_prs and 'pull' not in issue.html_url:
+                if self.only_prs and 'pull' not in issue.html_url:
                     logging.info(str(number) + ' is issue, skipping')
                     redo = False
                     continue
 
-                if self.args.only_issues and 'pull' in issue.html_url:
+                if self.only_issues and 'pull' in issue.html_url:
                     logging.info(str(number) + ' is pullrequest, skipping')
                     redo = False
                     continue
@@ -326,7 +326,7 @@ class AnsibleTriage(DefaultTriager):
                         file_indexer=self.file_indexer
                     )
 
-                    if self.args.skip_no_update:
+                    if self.skip_no_update:
                         lmeta = self.load_meta(iw)
 
                         if lmeta:
@@ -1222,14 +1222,11 @@ class AnsibleTriage(DefaultTriager):
 
     def check_safe_match(self, iw, actions):
 
-        if hasattr(self, 'safe_force_script'):
-
-            if self.safe_force_script:
-
-                with open(self.safe_force_script, 'rb') as f:
-                    fdata = f.read()
-                self.force = bool(eval(fdata))
-                return self.force
+        if self.safe_force_script:
+            with open(self.safe_force_script, 'rb') as f:
+                fdata = f.read()
+            self.force = bool(eval(fdata))
+            return self.force
 
         safe = True
 
@@ -1386,14 +1383,14 @@ class AnsibleTriage(DefaultTriager):
 
         for repo in REPOS:
             # skip repos based on args
-            if self.args.repo and self.args.repo != repo:
+            if self.repo and self.repo != repo:
                 continue
             if self.skiprepo:
                 if repo in self.skiprepo:
                     continue
-            if self.args.skip_module_repos and 'module' in repo:
+            if self.skip_module_repos and 'module' in repo:
                 continue
-            if self.args.module_repos_only and 'module' not in repo:
+            if self.module_repos_only and 'module' not in repo:
                 continue
             self._collect_repo(repo)
 
@@ -1432,12 +1429,12 @@ class AnsibleTriage(DefaultTriager):
         numbers = set(int(x) for x in numbers)
         logging.info('%s known numbers' % len(numbers))
 
-        if self.args.pr:
-            if os.path.isfile(self.args.pr) and \
-                    os.access(self.args.pr, os.X_OK):
+        if self.pr:
+            if os.path.isfile(self.pr) and \
+                    os.access(self.pr, os.X_OK):
                 # allow for scripts when trying to target spec issues
-                logging.info('executing %s' % self.args.pr)
-                (rc, so, se) = run_command(self.args.pr)
+                logging.info('executing %s' % self.pr)
+                (rc, so, se) = run_command(self.pr)
                 param_numbers = json.loads(so)
                 param_numbers = [int(x) for x in param_numbers]
                 logging.info(
@@ -1453,7 +1450,7 @@ class AnsibleTriage(DefaultTriager):
             numbers.intersection_update(param_numbers)
             numbers = list(numbers)
 
-        if self.args.daemonize:
+        if self.daemonize:
 
             if not self.repos[repo]['since']:
                 ts = [
@@ -1500,13 +1497,13 @@ class AnsibleTriage(DefaultTriager):
                     (len(numbers), since)
                 )
 
-        if self.args.start_at and self.repos[repo]['loopcount'] == 0:
-            numbers = [x for x in numbers if x <= self.args.start_at]
+        if self.start_at and self.repos[repo]['loopcount'] == 0:
+            numbers = [x for x in numbers if x <= self.start_at]
             logging.info('%s numbers after start-at' % len(numbers))
 
         # Get stale numbers if not targeting
         if repo not in MREPOS:
-            if self.args.daemonize and self.repos[repo]['loopcount'] > 0:
+            if self.daemonize and self.repos[repo]['loopcount'] > 0:
                 stale = self.get_stale_numbers(repo)
                 self.repos[repo]['stale'] = [int(x) for x in stale]
                 numbers += [int(x) for x in stale]
@@ -1518,7 +1515,7 @@ class AnsibleTriage(DefaultTriager):
         ################################################################
 
         # filter just the open numbers
-        if not self.args.only_closed and not self.args.ignore_state:
+        if not self.only_closed and not self.ignore_state:
             numbers = [
                 x for x in numbers
                 if str(x) in self.issue_summaries[repo] and
@@ -1527,13 +1524,13 @@ class AnsibleTriage(DefaultTriager):
             logging.info('%s numbers after checking state' % len(numbers))
 
         # filter by type
-        if self.args.only_issues:
+        if self.only_issues:
             numbers = [
                 x for x in numbers
                 if self.issue_summaries[repo][str(x)]['type'].lower() == 'issue'
             ]
             logging.info('%s numbers after checking type' % len(numbers))
-        elif self.args.only_prs:
+        elif self.only_prs:
             numbers = [
                 x for x in numbers
                 if self.issue_summaries[repo][str(x)]['type'].lower() ==
@@ -1543,7 +1540,7 @@ class AnsibleTriage(DefaultTriager):
 
         # Use iterator to avoid requesting all issues upfront
         numbers = sorted(set([int(x) for x in numbers]))
-        if self.args.sort == 'desc':
+        if self.sort == 'desc':
             numbers = [x for x in reversed(numbers)]
 
         self.repos[repo]['issues'] = RepoIssuesIterator(
@@ -2062,7 +2059,7 @@ class AnsibleTriage(DefaultTriager):
 
     def get_resume(self):
         '''Returns a dict with the last issue repo+number processed'''
-        if self.args.pr or not self.args.resume_enabled:
+        if self.pr or not self.resume_enabled:
             return
 
         resume_file = os.path.join(self.cachedir_base, 'resume.json')
@@ -2076,7 +2073,7 @@ class AnsibleTriage(DefaultTriager):
         return data
 
     def set_resume(self, repo, number):
-        if self.args.pr or not self.args.resume_enabled:
+        if self.pr or not self.resume_enabled:
             return
 
         data = {
