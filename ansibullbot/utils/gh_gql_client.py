@@ -155,7 +155,7 @@ class GithubGraphQLClient(object):
             return []
 
         numbers = [x['number'] for x in summaries]
-        missing = [x for x in xrange(1, numbers[-1]) if x not in numbers]
+        missing = (x for x in xrange(1, numbers[-1]) if x not in numbers)
         for x in missing:
             data = {
                 'created_at': None,
@@ -170,8 +170,7 @@ class GithubGraphQLClient(object):
             }
             summaries.append(data)
 
-        summaries = sorted(summaries, key=itemgetter('number'))
-        return summaries
+        return sorted(summaries, key=itemgetter('number'))
 
     def get_summaries(self, owner, repo, otype='issues', last=None, first='first: 100', states='states: OPEN', paginate=True):
         """Collect all the summary data for issues or pullreuests
