@@ -180,9 +180,8 @@ class AnsibleTriage(DefaultTriager):
         self.always_pause = False
 
         # where to store junk
-        self.cachedir = '~/.ansibullbot/cache'
-        self.cachedir = os.path.expanduser(self.cachedir)
-        self.cachedir_base = self.cachedir
+        self.cachedir_base = '~/.ansibullbot/cache'
+        self.cachedir_base = os.path.expanduser(self.cachedir_base)
 
         # repo objects
         self.repos = {}
@@ -206,7 +205,7 @@ class AnsibleTriage(DefaultTriager):
 
         # create the scraper for www data
         logging.info('creating webscraper')
-        self.gws = GithubWebScraper(cachedir=self.cachedir)
+        self.gws = GithubWebScraper(cachedir=self.cachedir_base)
         if C.DEFAULT_GITHUB_TOKEN:
             self.gqlc = GithubGraphQLClient(C.DEFAULT_GITHUB_TOKEN)
         else:
@@ -301,8 +300,7 @@ class AnsibleTriage(DefaultTriager):
             repo = item[1]['repo']
 
             # set the relative cachedir
-            self.cachedir = os.path.join(self.cachedir_base, repopath)
-            # this is where the issue history cache goes
+            cachedir = os.path.join(self.cachedir_base, repopath)
 
             for issue in item[1]['issues']:
 
@@ -361,7 +359,7 @@ class AnsibleTriage(DefaultTriager):
                         github=self.ghw,
                         repo=repo,
                         issue=issue,
-                        cachedir=self.cachedir,
+                        cachedir=cachedir,
                         file_indexer=self.file_indexer
                     )
 
@@ -539,7 +537,7 @@ class AnsibleTriage(DefaultTriager):
                     logging.warning("'pr' switch is used by but Github authentication token isn't set: all pull-requests will be scrapped")
 
                 cachefile = os.path.join(
-                    self.cachedir,
+                    self.cachedir_base, rp,
                     '%s__scraped_issues.json' % rp
                 )
                 self.issue_summaries[repopath] = self.gws.get_issue_summaries(
@@ -1351,7 +1349,7 @@ class AnsibleTriage(DefaultTriager):
 
         while True:
             for repo in REPOS:
-                cachedir = os.path.join(self.cachedir, repo)
+                cachedir = os.path.join(self.cachedir_base, repo)
                 thisrepo = self.ghw.get_repo(repo, verbose=False)
                 issues = thisrepo.repo.get_issues()
                 rl = thisrepo.get_rate_limit()
@@ -2039,13 +2037,12 @@ class AnsibleTriage(DefaultTriager):
         if self.args.pr or not self.args.resume:
             return
 
-        if hasattr(self, 'cachedir_base'):
-            resume_file = os.path.join(self.cachedir_base, 'resume.json')
-        else:
-            resume_file = os.path.join(self.cachedir, 'resume.json')
+        resume_file = os.path.join(self.cachedir_base, 'resume.json')
         if not os.path.isfile(resume_file):
+            logging.error('Resume: %r not found', resume_file)
             return None
 
+        logging.debug('Resume: read %r', resume_file)
         with open(resume_file, 'rb') as f:
             data = json.loads(f.read())
         return data
@@ -2058,9 +2055,6 @@ class AnsibleTriage(DefaultTriager):
             'repo': repo,
             'number': number
         }
-        if hasattr(self, 'cachedir_base'):
-            resume_file = os.path.join(self.cachedir_base, 'resume.json')
-        else:
-            resume_file = os.path.join(self.cachedir, 'resume.json')
+        resume_file = os.path.join(self.cachedir_base, 'resume.json')
         with open(resume_file, 'wb') as f:
             f.write(json.dumps(data, indent=2))
