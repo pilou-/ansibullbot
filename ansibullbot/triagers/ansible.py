@@ -208,12 +208,6 @@ class AnsibleTriage(DefaultTriager):
             else:
                 self.args.start_at = resume['number'] + 1
 
-    def _get_repo_path(self):
-        if self.github_repo in ['core', 'extras']:
-            return "ansible/ansible-modules-%s" % self.github_repo
-        else:
-            return "ansible/%s" % self.github_repo
-
     @property
     def ansible_members(self):
         if not self._ansible_members:
@@ -1273,7 +1267,6 @@ class AnsibleTriage(DefaultTriager):
         self.module_maintainers = []
         self.module = None
         self.template_data = {}
-        self.github_repo = issue.repo_full_name
         self.match = {}
 
         comment = self.render_comment(boilerplate=bp)
@@ -1297,7 +1290,6 @@ class AnsibleTriage(DefaultTriager):
         self.module_maintainers = []
         self.module = None
         self.template_data = {}
-        self.github_repo = issue.repo_full_name
         self.match = {}
 
         comment = self.render_comment(boilerplate=bp)
