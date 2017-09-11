@@ -26,6 +26,7 @@ import sys
 import time
 import pickle
 from datetime import datetime
+from pprint import pprint
 
 # remember to pip install PyGithub, kids!
 from github import Github
@@ -491,6 +492,30 @@ class DefaultTriager(object):
         if self.file_indexer:
             iw.file_indexer = self.file_indexer
         return iw
+
+    def trigger_rate_limit(self):
+        '''Repeatedly make calls to exhaust rate limit'''
+
+        self.gh = self._connect()
+        self.ghw = GithubWrapper(self.gh)
+
+        while True:
+            cachedir = os.path.join(self.cachedir_base, self.repo)
+            thisrepo = self.ghw.get_repo(self.repo, verbose=False)
+            issues = thisrepo.repo.get_issues()
+            rl = thisrepo.get_rate_limit()
+            pprint(rl)
+
+            for issue in issues:
+                iw = IssueWrapper(
+                        github=self.ghw,
+                        repo=thisrepo,
+                        issue=issue,
+                        cachedir=cachedir
+                )
+                iw.history
+                rl = thisrepo.get_rate_limit()
+                pprint(rl)
 
     def dump_action_dict(self, issue, actions):
         '''Serialize the action dict to disk for quick(er) debugging'''
