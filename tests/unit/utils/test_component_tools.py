@@ -54,21 +54,32 @@ def get_component_matcher():
     if not os.path.isdir(GR.checkoutdir):
         os.makedirs(GR.checkoutdir)
 
-    tarname = 'ansible-2017-10-24.tar.gz'
-    tarurl = 'http://tannerjc.net/ansible/{}'.format(tarname)
+    tarname = 'devel.tar.gz'
+    tarurl = 'https://github.com/ansible/ansible/archive/{}'.format(tarname)
+
     tarfile = 'tests/fixtures/{}'.format(tarname)
     tarfile = os.path.abspath(tarfile)
 
     if not os.path.isfile(tarfile):
-        cmd = 'cd {}; wget {}'.format(os.path.dirname(tarfile), tarurl)
+        cmd = 'cd {}; wget -nv {}'.format(os.path.dirname(tarfile), tarurl)
         (rc, so, se) = run_command(cmd)
         print(so)
         print(se)
         assert rc == 0
 
-    cmd = 'cd {} ; tar xzvf {}'.format(GR.checkoutdir, tarfile)
+    cmd = 'cd {} ; tar --one-top-level=ansible --strip-components=1 -xzvf {}'.format(GR.checkoutdir, tarfile)
     (rc, so, se) = run_command(cmd)
+    if rc:
+        raise Exception("Fail to execute '{}: {} ({}, {})'".format(cmd, rc, so, se))
+
     GR.checkoutdir = GR.checkoutdir + '/ansible'
+
+    hacking_dir = os.path.join(GR.checkoutdir, 'hacking')
+    os.mkdir(hacking_dir)
+    cmd = 'wget -nv https://raw.githubusercontent.com/ansible/ansible/devel/hacking/env-setup'
+    (rc, so, se) = run_command(cmd, cwd=hacking_dir)
+    if rc:
+        raise Exception("Fail to execute '{}: {} ({}, {})'".format(cmd, rc, so, se))
 
     # Load the files
     with open('tests/fixtures/filenames/2017-10-24.json', 'rb') as f:
